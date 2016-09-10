@@ -27,6 +27,7 @@ class WorkenServer(DatagramServer):
         print('%s:%s: got %r' % (address + (data, )))
         if content == Start_Recovery and self._startflag==False:
             # bind queen , return genesis block id
+            # when first communicate, node send it's public key , gensis block id to center node.
             self.initial_bind_queen(address)
             self.send_to_queen('gensisi block id')
             print('start recovery.')
@@ -39,6 +40,6 @@ class WorkenServer(DatagramServer):
 
 
 if __name__ == '__main__':
-    print('Receiving datagrams on :9000')
+    print('Receiving datagrams on localhost:9000')
     # bind localhost
     WorkenServer(':9000').serve_forever()
