@@ -24,4 +24,13 @@ def read_nodes(nodes_file):
         nodes_list.append(line.strip('\n'))
     return nodes_list
 
+
+# convert  queue to list
+def convert_to_list(received):
+    re = []
+    while received.qsize() > 0:
+        re.append(received.get())
+    return re
+
+
 # print(read_nodes('nodes-list'))
