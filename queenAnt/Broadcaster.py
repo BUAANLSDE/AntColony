@@ -16,7 +16,7 @@ Next_Block = 'next block'
 No_FollowUp = 'no_follow_up'
 
 # constant
-Waiting_time_each_round = 10  # Waiting time for each round of voting , 10 seconds
+Waiting_time_each_round = 5  # Waiting time for each round of voting , 10 seconds
 Worken_port = 9000
 NODES_FILE = 'nodes-list'
 
@@ -56,10 +56,11 @@ class QueenServer():
 
     # send data to a group of address
     def send_to_nodes(self,data):
-        address = ('10.2.1.35', 9000)
-        self._socketclient.connect(address)
-        # data is dict
-        self._socketclient.sendto(json.dumps(data).encode(),address)
+        for ip in self._address_list:
+            address = (ip, 9000)
+            self._socketclient.connect(address)
+            # data is dict
+            self._socketclient.sendto(json.dumps(data).encode(),address)
 
     # receive process
     def receiver(self):
@@ -83,19 +84,15 @@ class QueenServer():
                 self._nodes_keyring.append(one)
 
         verify_list = affairProcess.verifynodes(received_list,self._current_block_id.value.decode('utf-8'),self._nodes_keyring)
-        voted_block,voted_vote = affairProcess.vote(verify_list,len(self._address_list))
-        print('voted_vote : ')
-        print(voted_vote)
+        voted_block,voted_vote = affairProcess.vote(verify_list,len(self._address_list),self._nodes_keyring)
         # next block
-        if voted_vote == No_FollowUp :
+        if not voted_vote:
             self._current_block_id.value = 'STOP'.encode()
-            print('voted_vote: '+voted_vote)
         else:
-            self._current_block_id.value = json.loads(voted_vote)['vote']['voting_for_block'].encode()
-            print('voted_vote: '+json.loads(voted_vote)['vote']['voting_for_block'])
+            self._current_block_id.value = voted_vote[0]['vote']['voting_for_block'].encode()
+            print('voted_vote: '+voted_vote[0]['vote']['voting_for_block'])
         print('voted_block: '+json.loads(voted_block)['id'])
-        print('current block id : ')
-        print(self._current_block_id.value.decode('utf-8'))
+        print('current block id : '+self._current_block_id.value.decode('utf-8'))
 
 
     # main process
@@ -105,6 +102,8 @@ class QueenServer():
     # middle round : {type : Next_Block,current_block_id : block id}
     # last round : {type : End_Recovery,current_block_id : 'STOP'}
     def start(self):
+        # round count
+        round =1
         end = False
         self._current_block_id.value = 'genesis'.encode()
         send_data ={'type':Start_Recovery,'current_block_id':self._current_block_id.value.decode('utf-8')}
@@ -112,6 +111,7 @@ class QueenServer():
         while True:
             # clear queue
             self._receive_data.empty()
+            print('####################### Round %d Start #############################' % (round))
             # send request
             self.send_to_nodes(send_data)
             if end:
@@ -128,13 +128,14 @@ class QueenServer():
             voter = multiprocessing.Process(name='voter',target=self.voter)
             voter.start()
             voter.join()
+            # one round over
+            print('####################### Round %d Over ##############################' % (round))
+            round += 1
             if self._current_block_id.value.decode('utf-8') == 'STOP':
                 send_data = {'type':End_Recovery,'current_block_id':'STOP'}
                 end = True
             else:
                 # next round send_data
-                print('send data : ')
-                print(self._current_block_id.value.decode('utf-8'))
                 send_data = {'type':Next_Block,'current_block_id':self._current_block_id.value.decode('utf-8')}
 
 

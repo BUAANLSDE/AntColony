@@ -1,5 +1,7 @@
 
 test = []
 
-test2 = list(['test'])
-print(test2)
+failed = False
+
+if not test:
+    print("pass")
