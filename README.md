@@ -1,6 +1,6 @@
 #AntColony
 
-Simplechaindb 数据恢复程序。
+[Simplechaindb](http://git.oschina.net/buaalining/Simplechaindb)的数据恢复程序。
 
 ## queenAnt
 
