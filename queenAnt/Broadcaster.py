@@ -7,6 +7,10 @@ import util
 import affairProcess
 import json
 from multiprocessing import Manager
+from multiprocessing.sharedctypes import Value
+import leveldb
+import configparser
+import sys
 
 # signal
 Start_Recovery = 'recovery start'
@@ -16,7 +20,7 @@ Next_Block = 'next block'
 No_FollowUp = 'no_follow_up'
 
 # constant
-Waiting_time_each_round = 5  # Waiting time for each round of voting , 10 seconds
+Waiting_time_each_round = 5  # Waiting time for each round of voting , 5 seconds
 Worken_port = 9000
 NODES_FILE = 'nodes-list'
 
@@ -50,6 +54,9 @@ class QueenServer():
         self._publickey_list = []
         # receive data
         self._receive_data = multiprocessing.Queue()
+        # voted_block , voted_vote number
+        self._voted_block_number = Value('i', 0)
+        self._voted_vote_number = Value('i',0)
 
     def close_Server(self):
         self._socketserver.close()
@@ -57,7 +64,7 @@ class QueenServer():
     # send data to a group of address
     def send_to_nodes(self,data):
         for ip in self._address_list:
-            address = (ip, 9000)
+            address = (ip, Worken_port)
             self._socketclient.connect(address)
             # data is dict
             self._socketclient.sendto(json.dumps(data).encode(),address)
@@ -93,7 +100,10 @@ class QueenServer():
             print('voted_vote: '+voted_vote[0]['vote']['voting_for_block'])
         print('voted_block: '+json.loads(voted_block)['id'])
         print('current block id : '+self._current_block_id.value.decode('utf-8'))
-
+        # store block and votes
+        leveldb.store_block_votes(voted_block,voted_vote)
+        self._voted_block_number.value += 1
+        self._voted_vote_number.value += len(voted_vote)
 
     # main process
     # one round : send request -- receiver response ---vote
@@ -104,6 +114,7 @@ class QueenServer():
     def start(self):
         # round count
         round =1
+        # TODO: mkdir for leveldb
         end = False
         self._current_block_id.value = 'genesis'.encode()
         send_data ={'type':Start_Recovery,'current_block_id':self._current_block_id.value.decode('utf-8')}
@@ -111,11 +122,16 @@ class QueenServer():
         while True:
             # clear queue
             self._receive_data.empty()
-            print('####################### Round %d Start #############################' % (round))
             # send request
             self.send_to_nodes(send_data)
             if end:
+                # statistic block and vote number.
+                print('Voting statistics: ')
+                print('block: '+str(self._voted_block_number.value))
+                print('vote: '+str(self._voted_vote_number.value))
+                leveldb.write_header(self._voted_block_number.value,self._voted_vote_number.value)
                 return
+            print('####################### Round %d Start #############################' % (round))
             receiver = multiprocessing.Process(name='receiver',target=self.receiver)
             receiver.start()
             receiver.join(Waiting_time_each_round)
@@ -140,7 +156,18 @@ class QueenServer():
 
 
 if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print("Usage: python3 Broadcaster.py Ant.config")
+        sys.exit(1)
+    cf = configparser.ConfigParser()
+    cf.read(sys.argv[1])
+    # init parameter
+    Waiting_time_each_round = int(cf.get('QueenAnt','queenant_waiting_time_each_round'))
+    queenant_port = int(cf.get('QueenAnt','queenant_port'))
+    NODES_FILE = cf.get('QueenAnt','queenant_node_list')
+    Worken_port = int(cf.get('WorkenAnt','workenant_port'))
+
     # get local ip
     local_ip = util.get_ip('eth0')
-    print('start Broadcaster server on %s:9000' % local_ip)
-    QueenServer(host=local_ip,port=9000).start()
+    print('start Broadcaster server on %s:%d' % (local_ip,queenant_port))
+    QueenServer(host=local_ip,port=queenant_port).start()

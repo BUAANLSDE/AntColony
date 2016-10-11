@@ -9,7 +9,7 @@ class Point(Structure):
     _fields_ = [('x', c_double), ('y', c_double)]
 
 def modify(n, x, s, A,l):
-    n.value **= 2
+    n.value += 1
     x.value **= 2
     s.value = 'a77c8df1b9302c08f12a2a31308e14003b874621f4cb3786dd'.encode()
     result = ['test','test2']

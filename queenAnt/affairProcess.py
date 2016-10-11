@@ -121,7 +121,7 @@ def vote(verify_list,num_node,publickey_list):
         print('vote success!')
         return target_block,target_votes
     else:
-        print('pass failed!')
+        print('vote failed!')
         return None,None
 
 
