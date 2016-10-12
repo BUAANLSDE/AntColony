@@ -1,6 +1,6 @@
 #AntColony
 
-[Simplechaindb](http://git.oschina.net/buaalining/Simplechaindb)的数据恢复程序。
+[Simplechaindb](https://github.com/BUAANLSDE/Simplechaindb)的数据恢复程序。
 
 ## queenAnt
 
@@ -25,6 +25,18 @@
 ### nodes-list 
 
  配置集群节点，每行一个节点IP。
+
+### 运行
+
+ 首先启动所有的workenAnt
+ 
+ python3 Worken.py
+ 
+ 然后启动 quennAnt
+ 
+ python3 Broadcaster.py Ant.config
+  
+  
 
 
 
